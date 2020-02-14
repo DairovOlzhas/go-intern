@@ -1,0 +1,4 @@
+{
+  "pathToBookStore": "bookstore.json",
+  "port":            "8080"
+}
