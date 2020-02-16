@@ -16,11 +16,10 @@ type BookStore interface {
 	deleteBook(id int) error
 }
 
-
-func CreateBookStore(path string) (BookStore, error) {
+func CreateBookStore(path string) (*BookStoreClass, error) {
 	bs := &BookStoreClass{}
 	f := &os.File{}
-	if _, err := os.Stat(path); os.IsNotExist(err){
+	if _, err := os.Stat(path); os.IsNotExist(err) {
 		f, err = os.Create(path)
 		if err != nil {
 			return nil, err
@@ -77,15 +76,14 @@ func (bs *BookStoreClass) SaveBookStore(path string) error {
 	return nil
 }
 
-
-func (bs *BookStoreClass) createBook(book *Book) (*Book, error){
+func (bs *BookStoreClass) createBook(book *Book) (*Book, error) {
 	book.ID = bs.LastBookID
 	bs.LastBookID++
 	bs.Books = append(bs.Books, book)
 	return book, nil
 }
 
-func (bs *BookStoreClass) listBooks() ([]*Book, error){
+func (bs *BookStoreClass) listBooks() ([]*Book, error) {
 	return bs.Books, nil
 }
 
@@ -99,7 +97,7 @@ func (bs *BookStoreClass) getBook(id int) (*Book, error) {
 
 }
 
-func (bs *BookStoreClass) updateBook(book *Book, id int) (*Book, error){
+func (bs *BookStoreClass) updateBook(book *Book, id int) (*Book, error) {
 	for i, b := range bs.Books {
 		if b.ID == id {
 			book.ID = id
@@ -110,7 +108,7 @@ func (bs *BookStoreClass) updateBook(book *Book, id int) (*Book, error){
 	return nil, errors.New("Book ID not found")
 }
 
-func (bs *BookStoreClass) deleteBook(id int) error{
+func (bs *BookStoreClass) deleteBook(id int) error {
 	for i, b := range bs.Books {
 		if b.ID == id {
 			bs.Books = append(bs.Books[:i], bs.Books[i+1:]...)

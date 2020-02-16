@@ -10,22 +10,22 @@ import (
 type EndPoint interface {
 	BookGetHandler(idParam string) func(http.ResponseWriter, *http.Request)
 	BookUpdateHandler(idParam string) func(http.ResponseWriter, *http.Request)
-	BooksListHandler() func(http.ResponseWriter,*http.Request)
-	BooksCreateHandler() func(http.ResponseWriter,*http.Request)
-	BookDeleteHandler(idParam string) func(http.ResponseWriter,*http.Request)
+	BooksListHandler() func(http.ResponseWriter, *http.Request)
+	BooksCreateHandler() func(http.ResponseWriter, *http.Request)
+	BookDeleteHandler(idParam string) func(http.ResponseWriter, *http.Request)
 }
 
 type endPointFactory struct {
 	bks *BookStoreClass
 }
 
-func CreateEndPointFactory(bookStore *BookStoreClass) (EndPoint, error){
-	return &endPointFactory{bks:bookStore}, nil
+func CreateEndPointFactory(bookStore *BookStoreClass) (EndPoint, error) {
+	return &endPointFactory{bks: bookStore}, nil
 }
 
-func (ef *endPointFactory) SaveBookStoreHandler(pathToBooksStore string) func(http.ResponseWriter, *http.Request){
-	return func (w http.ResponseWriter, r *http.Request){
-		err := ef.bks.SaveBookStore(pathToBooksStore)
+func SaveBookStoreHandler(bookStore *BookStoreClass, pathToBooksStore string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := bookStore.SaveBookStore(pathToBooksStore)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Sorry: " + err.Error()))
@@ -36,7 +36,7 @@ func (ef *endPointFactory) SaveBookStoreHandler(pathToBooksStore string) func(ht
 	}
 }
 
-func (ef *endPointFactory) BooksCreateHandler() func(http.ResponseWriter,*http.Request){
+func (ef *endPointFactory) BooksCreateHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		decoder := json.NewDecoder(r.Body)
 		var book *Book
@@ -63,7 +63,7 @@ func (ef *endPointFactory) BooksCreateHandler() func(http.ResponseWriter,*http.R
 	}
 }
 
-func (ef *endPointFactory) BooksListHandler() func(http.ResponseWriter,*http.Request){
+func (ef *endPointFactory) BooksListHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		books, err := ef.bks.listBooks()
 		if err != nil {
@@ -72,7 +72,6 @@ func (ef *endPointFactory) BooksListHandler() func(http.ResponseWriter,*http.Req
 			return
 		}
 		n, err := json.Marshal(books)
-
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -85,7 +84,7 @@ func (ef *endPointFactory) BooksListHandler() func(http.ResponseWriter,*http.Req
 
 }
 
-func (ef *endPointFactory) BookGetHandler(idParam string) func(http.ResponseWriter, *http.Request){
+func (ef *endPointFactory) BookGetHandler(idParam string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id, err := strconv.Atoi(vars[idParam])
@@ -111,7 +110,7 @@ func (ef *endPointFactory) BookGetHandler(idParam string) func(http.ResponseWrit
 	}
 }
 
-func (ef *endPointFactory) BookUpdateHandler(idParam string) func(http.ResponseWriter, *http.Request){
+func (ef *endPointFactory) BookUpdateHandler(idParam string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 
@@ -132,7 +131,7 @@ func (ef *endPointFactory) BookUpdateHandler(idParam string) func(http.ResponseW
 			return
 		}
 
-		book , err = ef.bks.updateBook(book, id)
+		book, err = ef.bks.updateBook(book, id)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Sorry: " + err.Error()))
@@ -149,7 +148,7 @@ func (ef *endPointFactory) BookUpdateHandler(idParam string) func(http.ResponseW
 	}
 }
 
-func (ef *endPointFactory) BookDeleteHandler(idParam string) func(http.ResponseWriter,*http.Request){
+func (ef *endPointFactory) BookDeleteHandler(idParam string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id, err := strconv.Atoi(vars[idParam])

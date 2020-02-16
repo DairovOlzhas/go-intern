@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/dairovolzhas/go-intern/lesson6/book_store"
+	"github.com/dairovolzhas/go-intern/lesson7/book_store"
 	"github.com/gorilla/mux"
 	"github.com/urfave/cli"
 	"io/ioutil"
@@ -16,26 +16,33 @@ import (
 )
 
 var (
+	postgreConfigPath = ""
 	configPath = ""
-	flags = []cli.Flag{
+	flags      = []cli.Flag{
 		&cli.StringFlag{
 			Name:    "path",
 			Aliases: []string{"p"},
 			Usage:   "-path [--p] Path to json book_store",
-			//Required:    true,
+			Required:    true,
+			Destination: &configPath,
+		},
+		&cli.StringFlag{
+			Name:    "postgre-path",
+			Aliases: []string{"po-p"},
+			Usage:   "-postgre-path [--po-p] Path to json book_store",
+			Required:    true,
 			Destination: &configPath,
 		},
 	}
 )
 
-func main(){
+func main() {
 	app := &cli.App{
-		Flags:flags,
-		Name: "greet",
-		Usage: "dairov olzhas",
+		Flags:  flags,
+		Name:   "greet",
+		Usage:  "dairov olzhas",
 		Action: run,
 	}
-
 
 	err := app.Run(os.Args)
 
@@ -51,7 +58,7 @@ func run(c *cli.Context) error {
 	return nil
 }
 
-func startServer() error{
+func startServer() error {
 
 	config := book_store.Config{}
 	file, err := os.Open(configPath)
@@ -69,12 +76,30 @@ func startServer() error{
 		return err
 	}
 
+	postgreConfig := book_store.PostgreConfig{}
+	file, err = os.Open(postgreConfigPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	reader = bufio.NewReader(file)
+	data, err = ioutil.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return err
+	}
+
 
 	router := mux.NewRouter()
+
 	bookStore, err := book_store.CreateBookStore(config.PathToBookStore)
 	if err != nil {
 		return err
 	}
+
 	endpoints, err := book_store.CreateEndPointFactory(bookStore)
 	if err != nil {
 		return err
@@ -85,22 +110,25 @@ func startServer() error{
 	router.Methods("GET").Path("/{id}").HandlerFunc(endpoints.BookGetHandler("id"))
 	router.Methods("PUT").Path("/{id}").HandlerFunc(endpoints.BookUpdateHandler("id"))
 	router.Methods("DELETE").Path("/{id}").HandlerFunc(endpoints.BookDeleteHandler("id"))
-	router.Methods("POST").Path("/save").HandlerFunc(endpoints.SaveBookStoreHandler(config.PathToBookStore))
+	router.Methods("POST").Path("/save").HandlerFunc(book_store.SaveBookStoreHandler(bookStore, config.PathToBookStore))
 
-	router.Methods("GET").Path("/").HandlerFunc(endpoints.BooksListHandler())
-	router.Methods("POST").Path("/").HandlerFunc(endpoints.BooksCreateHandler())
-	router.Methods("GET").Path("/{id}").HandlerFunc(endpoints.BookGetHandler("id"))
-	router.Methods("PUT").Path("/{id}").HandlerFunc(endpoints.BookUpdateHandler("id"))
-	router.Methods("DELETE").Path("/{id}").HandlerFunc(endpoints.BookDeleteHandler("id"))
-	router.Methods("POST").Path("/save").HandlerFunc(endpoints.SaveBookStoreHandler(config.PathToBookStore))
 
+	endpointsPostgre, err := book_store.NewPostgreBookStore(postgreConfig)
+	if err != nil {
+		return err
+	}
+
+	router.Methods("GET").Path("/postgre/").HandlerFunc(endpointsPostgre.BooksListHandler())
+	router.Methods("POST").Path("/postgre/").HandlerFunc(endpointsPostgre.BooksCreateHandler())
+	router.Methods("GET").Path("/postgre/{id}").HandlerFunc(endpointsPostgre.BookGetHandler("id"))
+	router.Methods("PUT").Path("/postgre/{id}").HandlerFunc(endpointsPostgre.BookUpdateHandler("id"))
+	router.Methods("DELETE").Path("/postgre/{id}").HandlerFunc(endpointsPostgre.BookDeleteHandler("id"))
 
 	fmt.Println("Server Started")
 
 	go func() {
 		http.ListenAndServe(":"+config.Port, router)
 	}()
-
 
 	c := make(chan os.Signal)
 	d := make(chan bool)
@@ -118,9 +146,5 @@ func startServer() error{
 	}
 	os.Exit(1)
 
-
 	return nil
 }
-
-
-
