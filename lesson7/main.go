@@ -16,23 +16,23 @@ import (
 )
 
 var (
-	postgreConfigPath = ""
-	configPath = ""
+	postgreConfigPath = "postgreconfig.json"
+	configPath = "config.json"
 	flags      = []cli.Flag{
-		&cli.StringFlag{
-			Name:    "path",
-			Aliases: []string{"p"},
-			Usage:   "-path [--p] Path to json book_store",
-			Required:    true,
-			Destination: &configPath,
-		},
-		&cli.StringFlag{
-			Name:    "postgre-path",
-			Aliases: []string{"po-p"},
-			Usage:   "-postgre-path [--po-p] Path to json book_store",
-			Required:    true,
-			Destination: &configPath,
-		},
+		//&cli.StringFlag{
+		//	Name:    "path",
+		//	Aliases: []string{"p",},
+		//	Usage:   "-path [--p] Path to json book_store",
+		//	//Required:    true,
+		//	Destination: &configPath,
+		//},
+		//&cli.StringFlag{
+		//	Name:    "postgre-path",
+		//	Aliases: []string{"po-p",},
+		//	Usage:   "-postgre-path [--po-p] Path to json book_store",
+		//	//Required:    true,
+		//	Destination: &configPath,
+		//},
 	}
 )
 
@@ -87,7 +87,7 @@ func startServer() error {
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(data, &config)
+	err = json.Unmarshal(data, &postgreConfig)
 	if err != nil {
 		return err
 	}
@@ -107,9 +107,9 @@ func startServer() error {
 
 	router.Methods("GET").Path("/").HandlerFunc(endpoints.BooksListHandler())
 	router.Methods("POST").Path("/").HandlerFunc(endpoints.BooksCreateHandler())
-	router.Methods("GET").Path("/{id}").HandlerFunc(endpoints.BookGetHandler("id"))
-	router.Methods("PUT").Path("/{id}").HandlerFunc(endpoints.BookUpdateHandler("id"))
-	router.Methods("DELETE").Path("/{id}").HandlerFunc(endpoints.BookDeleteHandler("id"))
+	router.Methods("GET").Path("/{id:[0-9]+}").HandlerFunc(endpoints.BookGetHandler("id"))
+	router.Methods("PUT").Path("/{id:[0-9]+}").HandlerFunc(endpoints.BookUpdateHandler("id"))
+	router.Methods("DELETE").Path("/{id:[0-9]+}").HandlerFunc(endpoints.BookDeleteHandler("id"))
 	router.Methods("POST").Path("/save").HandlerFunc(book_store.SaveBookStoreHandler(bookStore, config.PathToBookStore))
 
 
@@ -118,16 +118,18 @@ func startServer() error {
 		return err
 	}
 
-	router.Methods("GET").Path("/postgre/").HandlerFunc(endpointsPostgre.BooksListHandler())
-	router.Methods("POST").Path("/postgre/").HandlerFunc(endpointsPostgre.BooksCreateHandler())
-	router.Methods("GET").Path("/postgre/{id}").HandlerFunc(endpointsPostgre.BookGetHandler("id"))
-	router.Methods("PUT").Path("/postgre/{id}").HandlerFunc(endpointsPostgre.BookUpdateHandler("id"))
-	router.Methods("DELETE").Path("/postgre/{id}").HandlerFunc(endpointsPostgre.BookDeleteHandler("id"))
+
+	router.Methods("GET").Path("/postgre").HandlerFunc(endpointsPostgre.BooksListHandler())
+	router.Methods("POST").Path("/postgre").HandlerFunc(endpointsPostgre.BooksCreateHandler())
+	router.Methods("GET").Path("/postgre/{id:[0-9]+}").HandlerFunc(endpointsPostgre.BookGetHandler("id"))
+	router.Methods("PUT").Path("/postgre/{id:[0-9]+}").HandlerFunc(endpointsPostgre.BookUpdateHandler("id"))
+	router.Methods("DELETE").Path("/postgre/{id:[0-9]+}").HandlerFunc(endpointsPostgre.BookDeleteHandler("id"))
 
 	fmt.Println("Server Started")
+	fmt.Println(config.Port)
 
 	go func() {
-		http.ListenAndServe(":"+config.Port, router)
+		http.ListenAndServe("localhost:"+config.Port, router)
 	}()
 
 	c := make(chan os.Signal)
@@ -139,11 +141,13 @@ func startServer() error {
 	}()
 	<-d
 	err = bookStore.SaveBookStore(config.PathToBookStore)
+
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
-		fmt.Println("\r- Good bay!")
+		fmt.Println("\r- Book Store saved!")
 	}
+
 	os.Exit(1)
 
 	return nil

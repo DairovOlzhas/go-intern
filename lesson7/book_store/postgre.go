@@ -20,21 +20,26 @@ type PostgreConfig struct {
 
 func NewPostgreBookStore(config PostgreConfig) (EndPoint, error) {
 	db := pg.Connect(&pg.Options{
-		Addr:     config.Host + ":" + config.Port,
+		Addr: "localhost:5432",//":" + config.Port,
 		User:     "postgres",
-		Password: config.Password,
+		Password: "postgres",
+		Database: "libriary",
 	})
+
 	err := createSchema(db)
 	if err != nil {
 		return nil, err
 	}
+	//defer db.Close()
 	return &postgreStore{db: db}, nil
 }
 
 func createSchema(db *pg.DB) error {
 	for _, model := range []interface{}{(*Book)(nil)} {
+
 		err := db.CreateTable(model, &orm.CreateTableOptions{
-			Temp: true,
+			//Temp: true,
+			IfNotExists:true,
 		})
 		if err != nil {
 			return err
@@ -50,7 +55,7 @@ type postgreStore struct {
 func (ps *postgreStore) BooksCreateHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		decoder := json.NewDecoder(r.Body)
-		var book *Book
+		var book Book
 		err := decoder.Decode(&book)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -135,7 +140,7 @@ func (ps *postgreStore) BookUpdateHandler(idParam string) func(http.ResponseWrit
 
 		decoder := json.NewDecoder(r.Body)
 
-		var book *Book
+		var book Book
 		err = decoder.Decode(&book)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -143,13 +148,13 @@ func (ps *postgreStore) BookUpdateHandler(idParam string) func(http.ResponseWrit
 			return
 		}
 
-		book, err = ps.UpdateBook(book, id)
+		updated_book, err := ps.UpdateBook(book, id)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Sorry: " + err.Error()))
 			return
 		}
-		b, err := json.Marshal(book)
+		b, err := json.Marshal(updated_book)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Sorry: " + err.Error()))
@@ -180,7 +185,7 @@ func (ps *postgreStore) BookDeleteHandler(idParam string) func(http.ResponseWrit
 	}
 }
 
-func (ps *postgreStore) CreateBook(book *Book) (*Book, error) {
+func (ps *postgreStore) CreateBook(book Book) (Book, error) {
 	return book, ps.db.Insert(&book)
 }
 
@@ -202,13 +207,18 @@ func (ps *postgreStore) GetBook(id int) (*Book, error) {
 	return book, nil
 }
 
-func (ps *postgreStore) UpdateBook(book *Book, id int) (*Book, error) {
-	book.ID = id
-	err := ps.db.Update(book)
+func (ps *postgreStore) UpdateBook(book Book, id int) (*Book, error) {
+	new_book := &Book{
+		ID:          id,
+		Name:        book.Name,
+		Description: book.Description,
+		Author:      book.Description,
+	}
+	err := ps.db.Update(new_book)
 	if err != nil {
 		return nil, err
 	}
-	return book, nil
+	return new_book, nil
 }
 
 func (ps *postgreStore) DeleteBook(id int) error {
@@ -219,3 +229,12 @@ func (ps *postgreStore) DeleteBook(id int) error {
 	}
 	return nil
 }
+
+func (ps *postgreStore) CloseDB() error {
+	err := ps.db.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
