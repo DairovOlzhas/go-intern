@@ -16,14 +16,15 @@ type PostgreConfig struct {
 	Password string
 	Port     string
 	Host     string
+	Database string
 }
 
 func NewPostgreBookStore(config PostgreConfig) (EndPoint, error) {
 	db := pg.Connect(&pg.Options{
-		Addr: "localhost:5432",//":" + config.Port,
-		User:     "postgres",
-		Password: "postgres",
-		Database: "libriary",
+		Addr: config.Host+ ":" + config.Port,
+		User:     config.User,
+		Password: config.Password,
+		Database: config.Database,
 	})
 
 	err := createSchema(db)
@@ -160,7 +161,7 @@ func (ps *postgreStore) BookUpdateHandler(idParam string) func(http.ResponseWrit
 			w.Write([]byte("Sorry: " + err.Error()))
 			return
 		}
-		w.WriteHeader(201)
+		w.WriteHeader(200)
 		w.Write(b)
 	}
 
@@ -184,6 +185,7 @@ func (ps *postgreStore) BookDeleteHandler(idParam string) func(http.ResponseWrit
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
+
 
 func (ps *postgreStore) CreateBook(book Book) (Book, error) {
 	return book, ps.db.Insert(&book)
@@ -230,11 +232,4 @@ func (ps *postgreStore) DeleteBook(id int) error {
 	return nil
 }
 
-func (ps *postgreStore) CloseDB() error {
-	err := ps.db.Close()
-	if err != nil {
-		return err
-	}
-	return nil
-}
 

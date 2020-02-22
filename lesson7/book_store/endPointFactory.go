@@ -143,7 +143,7 @@ func (ef *endPointFactory) BookUpdateHandler(idParam string) func(http.ResponseW
 			w.Write([]byte("Sorry: " + err.Error()))
 			return
 		}
-		w.WriteHeader(201)
+		w.WriteHeader(200)
 		w.Write(b)
 	}
 }

@@ -1,6 +1,7 @@
 {
   "User":     "postgres",
   "Password": "postgres",
+  "database": "libriary",
   "Port":     "5432",
   "Host":     "localhost"
 }
